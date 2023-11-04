@@ -13,7 +13,7 @@ services:
       - "7893:5000"
     env_file:
       - .env
-    command: mlflow server --backend-store-uri mysql+pymysql://root:admin@mysql:3306/mlflow_database --default-artifact-root s3://mlflow/ --host 0.0.0.0
+    command: mlflow server --backend-store-uri mysql+pymysql://${MYSQL_ROOT_USER}:${MYSQL_ROOT_PASSWORD}@mysql:3306/${MYSQL_DATABASESS} --default-artifact-root s3://mlflow/ --host 0.0.0.0
     networks:
       - de_network
 
@@ -39,14 +39,11 @@ services:
     ports:
       - "3307:3306"
     environment:
-      # - MYSQL_DATABASE=mlflow_database
       - MYSQL_DATABASE=${MYSQL_DATABASESS}
-      - MYSQL_ROOT_USER=root
-      - MYSQL_USER=admin
-      - MYSQL_PASSWORD=admin
-      - MYSQL_ROOT_PASSWORD=admin
-    # env_file:
-    #   - .env
+      - MYSQL_ROOT_USER=${MYSQL_ROOT_USER}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     volumes:
       - mysql:/var/lib/mysql
     networks:
