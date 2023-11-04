@@ -1,0 +1,10 @@
+# Environments
+.env
+spark-master.env
+spark-worker.env
+
+# folder
+dagster_home/.nux/
+dagster_home/.telemetry/
+dagster_home/compute_logs/
+dagster_home/logs/
