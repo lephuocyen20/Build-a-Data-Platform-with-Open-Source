@@ -50,7 +50,9 @@ defs = Definitions(
         silver_cleaned_stocks,
         silver_cleaned_trades,
         silver_transformation_trades,
-        silver_agg_trades
+        silver_agg_trades,
+        gold_stock_join_aggtrades,
+        gold_stock_join_transtrades
     ],
     resources=resources
 )
