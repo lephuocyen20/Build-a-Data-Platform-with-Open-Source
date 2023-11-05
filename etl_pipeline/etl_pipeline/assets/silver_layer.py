@@ -86,7 +86,7 @@ def silver_cleaned_trades(context, bronze_trades: pl.DataFrame) -> Output[DataFr
             .withColumnRenamed("Low", "Low_Price") \
             .withColumnRenamed("Last", "Last_Price") \
             .withColumnRenamed("Close", "Close_Price") \
-            .withColumn("Date", date_format("Date", "dd-MM-yyyy")) \
+            .withColumn("Date", date_format("Date", "yyyy-MM-dd")) \
             .drop('ID')
         spark_df.unpersist()
 
