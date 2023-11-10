@@ -2,29 +2,30 @@ CREATE DATABASE stock;
 
 USE stock;
 
-CREATE TABLE Stocks (
-    Symbol VARCHAR(10) PRIMARY KEY,
-    CompanyName VARCHAR(100),
-    Series VARCHAR(50),
-    Industry VARCHAR(50),
-    ISIN_Code VARCHAR(50)
+CREATE TABLE companies (
+    symbol VARCHAR(10) PRIMARY KEY,
+    comGroupCode VARCHAR(10),
+    organName NVARCHAR(100),
+    organShortName NVARCHAR(100),
+    organTypeCode VARCHAR(10),
+    icbName NVARCHAR(100),
+    sector NVARCHAR(100),
+    industry NVARCHAR(100),
+    group NVARCHAR(100),
+    subGroup NVARCHAR(100),
+    icbCode INT
 );
 
 CREATE TABLE Trades (
     ID INT AUTO_INCREMENT PRIMARY KEY,
-    Date TIMESTAMP,
-    Symbol VARCHAR(10),
-    Prev_Close DECIMAL(10, 2),
-    Open DECIMAL(10, 2),
-    High DECIMAL(10, 2),
-    Low DECIMAL(10, 2),
-    Last DECIMAL(10, 2),
-    Close DECIMAL(10, 2),
-    VWAP DECIMAL(10, 2),
-    Volume INT,
-    Turnover BIGINT,
-    Trades INT,
-    Deliverable_Volume INT,
-    Percent_Deliverable DECIMAL(5, 2),
-    FOREIGN KEY (Symbol) REFERENCES Stocks(Symbol)
+    symbol VARCHAR(10),
+    value INT,
+    tradingDate DATE,
+    time TIMESTAMP,
+    open INT,
+    high INT,
+    low INT,
+    close INT,
+    volume INT,
+    FOREIGN KEY (symbol) REFERENCES companies(symbol)
 );
