@@ -45,14 +45,14 @@ resources = {
 defs = Definitions(
     # assets=load_assets_from_modules([assets]),
     assets=[
-        bronze_stocks,
-        bronze_trades,
-        silver_cleaned_stocks,
-        silver_cleaned_trades,
-        silver_transformation_trades,
-        silver_agg_trades,
-        gold_stock_join_aggtrades,
-        gold_stock_join_transtrades
+        bronze_companies,
+        bronze_trades
+        # silver_cleaned_stocks,
+        # silver_cleaned_trades,
+        # silver_transformation_trades,
+        # silver_agg_trades,
+        # gold_stock_join_aggtrades,
+        # gold_stock_join_transtrades
     ],
     resources=resources
 )

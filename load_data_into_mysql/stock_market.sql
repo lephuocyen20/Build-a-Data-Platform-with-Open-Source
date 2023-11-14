@@ -11,7 +11,7 @@ CREATE TABLE companies (
     icbName NVARCHAR(100),
     sector NVARCHAR(100),
     industry NVARCHAR(100),
-    group NVARCHAR(100),
+    `group` NVARCHAR(100),
     subGroup NVARCHAR(100),
     icbCode INT
 );

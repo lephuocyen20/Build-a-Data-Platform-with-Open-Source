@@ -1,30 +1,26 @@
-from dagster import asset, Output, StaticPartitionsDefinition
-from datetime import datetime
+from dagster import asset, Output
 import polars as pl
 
 COMPUTE_KIND = "SQL"
 LAYER = "bronze"
-YEARLY = StaticPartitionsDefinition(
-    [str(year) for year in range(2000, datetime.today().year)]
-)
 
 @asset(
-        description="Load table 'Stocks' from MySQL using polars Dataframe and save to MinIO",
+        description="Load table 'companies' from MySQL using polars Dataframe and save to MinIO",
         io_manager_key="minio_io_manager",
         required_resource_keys={"mysql_io_manager"},
-        key_prefix=["bronze", "stock"],
+        key_prefix=["bronze", "company"],
         compute_kind=COMPUTE_KIND,
         group_name=LAYER
 )
-def bronze_stocks(context) -> Output[pl.DataFrame]:
-    query = "SELECT * FROM Stocks;"
+def bronze_companies(context) -> Output[pl.DataFrame]:
+    query = "SELECT * FROM companies;"
     df = context.resources.mysql_io_manager.extract_data(query)
     context.log.info(f"Table extracted with shape: {df.shape}")
 
     return Output(
         value=df,
         metadata={
-            "table": "stocks",
+            "table": "companies",
             "row_count": df.shape[0],
             "column_count": df.shape[1],
             "columns": df.columns
