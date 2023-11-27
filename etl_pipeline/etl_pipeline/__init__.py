@@ -46,13 +46,17 @@ defs = Definitions(
     # assets=load_assets_from_modules([assets]),
     assets=[
         bronze_companies,
-        bronze_trades
-        # silver_cleaned_stocks,
-        # silver_cleaned_trades,
-        # silver_transformation_trades,
-        # silver_agg_trades,
-        # gold_stock_join_aggtrades,
-        # gold_stock_join_transtrades
+        bronze_trades,
+
+        silver_cleaned_companies,
+        silver_cleaned_trades,
+        silver_dim_company,
+        silver_dim_date,
+        silver_fact_stock,
+
+        gold_stock_price_change,
+        gold_stock_gainer_daily,
+        gold_stock_loser_daily,
     ],
     resources=resources
 )

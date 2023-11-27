@@ -44,10 +44,15 @@ class SparkIOManager(IOManager):
 
         layer, _, table = context.asset_key.path
         table_name = str(table.replace(f"{layer}_", ""))
+        mode = (context.metadata or {}).get("mode", "overwrite")
         context.log.debug(f"(Spark handle_output) Layer: {layer} - table: {table_name}")
+        context.log.debug(f"mode: {mode}")
 
         try:
-            obj.write.format("iceberg").mode("overwrite").saveAsTable(f"hive_prod.{layer}.{table_name}")
+            with init_spark_session() as spark:
+                spark.sql(f"CREATE SCHEMA IF NOT EXISTS hive_prod.{layer}")
+
+            obj.write.format("iceberg").mode(f"{mode}").saveAsTable(f"hive_prod.{layer}.{table_name}")
             context.log.debug(f"Saved {table_name} to {layer} layer")
         except Exception as e:
             raise Exception(f"(Spark handle_output) Error while writing output: {e}")

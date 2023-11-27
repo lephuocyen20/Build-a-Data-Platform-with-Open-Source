@@ -26,4 +26,11 @@ RUN curl -O https://repo1.maven.org/maven2/software/amazon/awssdk/s3/2.18.41/s3-
 RUN pip install minio==7.1.16 \
     dagster==1.1.20 \
     trino[sqlalchemy] \
-    trino
+    trino \
+    pandas==1.5.3 \
+    numpy==1.23.5 \
+    seaborn==0.12.2 \
+    matplotlib==3.7.1 \
+    scikit-learn==1.2.2 \
+    xgboost==2.0.2 \
+    boto3

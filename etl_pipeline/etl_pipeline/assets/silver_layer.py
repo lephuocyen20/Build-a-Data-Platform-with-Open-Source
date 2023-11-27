@@ -5,46 +5,48 @@ from pyspark.sql import DataFrame
 
 from ..resources.spark_io_manager import init_spark_session
 from pyspark.sql.functions import *
+from datetime import timedelta
+from pyspark.sql.types import *
 
 COMPUTE_KIND = "PySpark"
 LAYER = "silver"
 
 @asset(
-        description="",
-        ins={
-            "bronze_stocks": AssetIn(
-                key_prefix=["bronze", "stock"]
-            ),
-        },
-        io_manager_key="spark_io_manager",
-        key_prefix=["silver", "stock"],
-        compute_kind=COMPUTE_KIND,
-        group_name=LAYER
+    description="Cleaning companies table",
+    ins={
+        "bronze_companies": AssetIn(
+            key_prefix=["bronze", "company"]
+        ),
+    },
+    io_manager_key="spark_io_manager",
+    key_prefix=[LAYER, "company"],
+    metadata={"mode": "overwrite"},
+    compute_kind=COMPUTE_KIND,
+    group_name=LAYER
 )
-def silver_cleaned_stocks(context, bronze_stocks: pl.DataFrame) -> Output[DataFrame]:
+def silver_cleaned_companies(context, bronze_companies: pl.DataFrame) -> Output[DataFrame]:
     """
-        Load stock table from bronze layer in MinIO, into a Spark dataframe, then clean data
+        Load companies table from bronze layer in MinIO, into a Spark dataframe, then clean data
     """
 
-    context.log.debug("Start creating spark session")
+    context.log.debug("Start cleaning companies table")
 
     with init_spark_session() as spark:
         # Convert bronze_trade from polars DataFrame to Spark DataFrame
-        pandas_df = bronze_stocks.to_pandas()
+        pandas_df = bronze_companies.to_pandas()
         context.log.debug(
             f"Converted to pandas DataFrame with shape: {pandas_df.shape}"
         )
 
         spark_df = spark.createDataFrame(pandas_df)
-        spark_df.cache()
+
         context.log.info("Got Spark DataFrame")
-        spark.sql("CREATE SCHEMA IF NOT EXISTS hive_prod.silver")
-        spark_df.unpersist()
+        # spark.sql("CREATE SCHEMA IF NOT EXISTS hive_prod.silver")
 
         return Output(
             value=spark_df,
             metadata={
-                "table": "silver_cleaned_stocks",
+                "table": "silver_cleaned_companies",
                 "row_count": spark_df.count(),
                 "column_count": len(spark_df.columns),
                 "columns": spark_df.columns,
@@ -52,23 +54,24 @@ def silver_cleaned_stocks(context, bronze_stocks: pl.DataFrame) -> Output[DataFr
         )
 
 @asset(
-        description="",
-        ins={
-            "bronze_trades": AssetIn(
-                key_prefix=["bronze", "trade"]
-            ),
-        },
-        io_manager_key="spark_io_manager",
-        key_prefix=["silver", "trade"],
-        compute_kind=COMPUTE_KIND,
-        group_name=LAYER
+    description="Cleaning trades table",
+    ins={
+        "bronze_trades": AssetIn(
+            key_prefix=["bronze", "trade"]
+        ),
+    },
+    io_manager_key="spark_io_manager",
+    key_prefix=[LAYER, "trade"],
+    metadata={"mode": "overwrite"},
+    compute_kind=COMPUTE_KIND,
+    group_name=LAYER
 )
 def silver_cleaned_trades(context, bronze_trades: pl.DataFrame) -> Output[DataFrame]:
     """
         Load trade table from bronze layer in MinIO, into a Spark dataframe, then clean data
     """
 
-    context.log.debug("Start creating spark session")
+    context.log.debug("Start cleaning trades table")
 
     with init_spark_session() as spark:
         # Convert bronze_trade from polars DataFrame to Spark DataFrame
@@ -78,17 +81,15 @@ def silver_cleaned_trades(context, bronze_trades: pl.DataFrame) -> Output[DataFr
         )
 
         spark_df = spark.createDataFrame(pandas_df)
-        spark_df.cache()
+
         context.log.info("Got Spark DataFrame")
-        spark_df = spark_df.withColumnRenamed("VWAP", "Volume_Weight_Avg_Price") \
-            .withColumnRenamed("Open", "Open_Price") \
-            .withColumnRenamed("High", "High_Price") \
-            .withColumnRenamed("Low", "Low_Price") \
-            .withColumnRenamed("Last", "Last_Price") \
-            .withColumnRenamed("Close", "Close_Price") \
-            .withColumn("Date", date_format("Date", "yyyy-MM-dd")) \
-            .drop('ID')
-        spark_df.unpersist()
+        spark_df = spark_df \
+            .withColumnRenamed("open", "open_price") \
+            .withColumnRenamed("high", "high_price") \
+            .withColumnRenamed("low", "low_price") \
+            .withColumnRenamed("close", "close_price") \
+            .drop('ID') \
+            .dropDuplicates(['symbol', 'tradingDate'])
 
         return Output(
             value=spark_df,
@@ -101,29 +102,30 @@ def silver_cleaned_trades(context, bronze_trades: pl.DataFrame) -> Output[DataFr
         )
     
 @asset(
-        description="Transformation trades",
-        ins={
-            "silver_cleaned_trades": AssetIn(
-                key_prefix=["silver", "trade"]
-            ),
-        },
-        io_manager_key="spark_io_manager",
-        key_prefix=["silver", "trade"],
-        compute_kind=COMPUTE_KIND,
-        group_name=LAYER
+    description="Create dim company",
+    ins={
+        "silver_cleaned_companies": AssetIn(
+            key_prefix=["silver", "company"]
+        ),
+    },
+    io_manager_key="spark_io_manager",
+    key_prefix=[LAYER, "company"],
+    metadata={"mode": "overwrite"},
+    compute_kind=COMPUTE_KIND,
+    group_name=LAYER
 )
-def silver_transformation_trades(context, silver_cleaned_trades: DataFrame) -> Output[DataFrame]:
-    spark_df = silver_cleaned_trades
-    context.log.debug("Caching spark_df ...")
-    spark_df.cache()
-    spark_df = spark_df.withColumn("Price_Change", col('Last_Price') - col('Prev_Close')) \
-        .withColumn("Percent_Change", bround((col('Price_Change') / col('Last_Price'))*100, 2)) 
-    spark_df.unpersist()
+def silver_dim_company(context, silver_cleaned_companies: DataFrame) -> Output[DataFrame]:
+    spark_df = silver_cleaned_companies
+    context.log.debug("Start creating dim company table")
+
+    spark_df = spark_df \
+        .withColumnRenamed("symbol", "companyKey") \
+        .select("companyKey", "comGroupCode", "organName", "organShortName", "organTypeCode", "icbName", "sector", "industry", "group", "subGroup")
 
     return Output(
         value=spark_df,
         metadata={
-            "table": "silver_transformation_trades",
+            "table": "silver_dim_company",
             "row_count": spark_df.count(),
             "column_count": len(spark_df.columns),
             "columns": spark_df.columns,
@@ -131,55 +133,86 @@ def silver_transformation_trades(context, silver_cleaned_trades: DataFrame) -> O
     )
 
 @asset(
-        description="Aggregate trades",
-        ins={
-            "silver_cleaned_trades": AssetIn(
-                key_prefix=["silver", "trade"]
-            ),
-        },
-        io_manager_key="spark_io_manager",
-        key_prefix=["silver", "trade"],
-        compute_kind=COMPUTE_KIND,
-        group_name=LAYER
+    description="Create dim date",
+    ins={
+        "silver_cleaned_trades": AssetIn(
+            key_prefix=["silver", "trade"]
+        ),
+    },
+    io_manager_key="spark_io_manager",
+    key_prefix=[LAYER, "trade"],
+    metadata={"mode": "overwrite"},
+    compute_kind=COMPUTE_KIND,
+    group_name=LAYER
 )
-def silver_agg_trades(context, silver_cleaned_trades: DataFrame) -> Output[DataFrame]:
+def silver_dim_date(context, silver_cleaned_trades: DataFrame) -> Output[DataFrame]:
     spark_df = silver_cleaned_trades
-    context.log.debug("Caching spark_df ...")
-    spark_df.cache()
-    spark_df = spark_df.groupBy('Symbol') \
-        .agg(
-            min('Date').alias('Start'),
-            max('Date').alias('End'),
+    context.log.debug("Start creating dim date ")
+    
+    start_date = spark_df.select(min("tradingDate")).first()[0]
+    end_date = spark_df.select(max("tradingDate")).first()[0]
 
-            min('Open_Price').alias('Min_Open'),
-            max('Open_Price').alias('Max_Open'),
-            avg('Open_Price').alias('Avg_Open'),
+    with init_spark_session() as spark:
+        date_range = spark.sparkContext.parallelize([(start_date + timedelta(days=x)) for x in range((end_date - start_date).days + 1)])
+        date_df = date_range.map(lambda x: (x,)).toDF(['date'])
 
-            min('High_Price').alias('Min_High'),
-            max('High_Price').alias('Max_High'),
-            avg('High_Price').alias('Avg_High'),
+        date_df = date_df.withColumn("dateKey", year(col("date"))*10000 + month(col("date"))*100 + dayofmonth(col("date"))) \
+            .withColumn("year", year(col("date"))) \
+            .withColumn("quarter", quarter(col("date"))) \
+            .withColumn("month", month(col("date"))) \
+            .withColumn("week", weekofyear(col("date"))) \
+            .withColumn("day", dayofmonth(col("date"))) \
+            .withColumn("day_of_year", dayofyear(col("date"))) \
+            .withColumn("day_name_of_week", date_format(col("date"), "EEEE")) \
+            .withColumn("month_name_of_week", date_format(col("date"), "MMMM")) \
+            .withColumnRenamed("date", "full_date") \
+            .selectExpr(['dateKey', 'full_date', 'year', 'quarter', 'month', 'week', 'day', 'day_of_year', 'day_name_of_week', 'month_name_of_week'])
 
-            min('Low_Price').alias('Min_Low'),
-            max('Low_Price').alias('Max_Low'),
-            avg('Low_Price').alias('Avg_Low'),
-
-            min('Last_Price').alias('Min_Last'),
-            max('Last_Price').alias('Max_Last'),
-            avg('Last_Price').alias('Avg_Last'),
-
-            min('Close_Price').alias('Min_Close'),
-            max('Close_Price').alias('Max_Close'),
-            avg('Close_Price').alias('Avg_Close'),
-
-            sum('Volume').alias('Sum_Volume')
+        return Output(
+            value=date_df,
+            metadata={
+                "table": "silver_dim_date",
+                "row_count": date_df.count(),
+                "column_count": len(date_df.columns),
+                "columns": date_df.columns,
+            },
         )
+
+@asset(
+    description="Create fact table",
+    ins={
+        "silver_cleaned_trades": AssetIn(
+            key_prefix=["silver", "trade"]
+        ),
+        "silver_dim_company": AssetIn(
+            key_prefix=["silver", "company"]
+        ),
+        "silver_dim_date": AssetIn(
+            key_prefix=["silver", "trade"]
+        ),
+    },
+    io_manager_key="spark_io_manager",
+    key_prefix=[LAYER, "trade"],
+    metadata={"mode": "overwrite"},
+    compute_kind=COMPUTE_KIND,
+    group_name=LAYER
+)
+def silver_fact_stock(context, silver_cleaned_trades: DataFrame, silver_dim_company: DataFrame, silver_dim_date: DataFrame) -> Output[DataFrame]:
+    context.log.debug("Start creating fact table ...")
+    
+    fact_table = (
+        silver_cleaned_trades
+        .join(silver_dim_company, silver_cleaned_trades['symbol'] == silver_dim_company['companyKey'], 'inner')
+        .join(silver_dim_date, silver_cleaned_trades['tradingDate'] == silver_dim_date['full_date'], 'inner')
+        .select('dateKey', 'companyKey', 'open_price', 'high_price', 'low_price', 'close_price', 'Volume')
+    )
     
     return Output(
-        value=spark_df,
+        value=fact_table,
         metadata={
-            "table": "silver_agg_trades",
-            "row_count": spark_df.count(),
-            "column_count": len(spark_df.columns),
-            "columns": spark_df.columns,
+            "table": "silver_fact_stock",
+            "row_count": fact_table.count(),
+            "column_count": len(fact_table.columns),
+            "columns": fact_table.columns,
         },
     )

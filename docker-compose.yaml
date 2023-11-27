@@ -1,26 +1,5 @@
 version: '3.9'
 services:
-  # DB
-  db:
-    environment:
-      - POSTGRES_HOST=${POSTGRES_HOSTS}
-      - POSTGRES_PORT=${POSTGRES_PORT}
-      - POSTGRES_DB=${POSTGRES_DBS}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_HOST_AUTH_METHOD=${POSTGRES_HOST_AUTH_METHOD}
-    image: postgres:14-alpine
-    container_name: Superset_db
-    restart: unless-stopped
-    expose:
-      - "5432"
-    ports:
-      - "5433:5432"
-    volumes:
-      - db_home:/var/lib/postgresql/data
-    networks:
-      - de_network
-
   # Mysql
   mysql:
     image: mysql:8.0
@@ -103,8 +82,10 @@ services:
     container_name: mc
     hostname: mc
     env_file: .env
+    # entrypoint: >
+    #   /bin/sh -c " until (/usr/bin/mc config host add minio http://minio:9000 minio_username minio_password) do echo '...waiting...' && sleep 10; done; /usr/bin/mc mb minio/mlflow; /usr/bin/mc policy set public minio/mlflow; tail -f /dev/null;"
     entrypoint: >
-      /bin/sh -c " until (/usr/bin/mc config host add minio http://minio:9000 minio_username minio_password) do echo '...waiting...' && sleep 10; done; /usr/bin/mc mb minio/mlflow; /usr/bin/mc policy set public minio/mlflow; tail -f /dev/null;"
+        /bin/sh -c " until (/usr/bin/mc config host add minio http://minio:9000 minio_username minio_password) do echo '...waiting...' && sleep 10; done; tail -f /dev/null;"
     depends_on:
       - minio
     networks:
@@ -173,50 +154,46 @@ services:
       context: ./docker/superset
       dockerfile: Dockerfile
     container_name: Superset
-    environment:
-      - ADMIN_USERNAME=admin
-      - ADMIN_EMAIL=admin@superset.com
-      - ADMIN_PASSWORD=admin
+    env_file:
+      - .env
     ports:
       - '8088:8088'
-    depends_on: 
-      - db
     volumes:
       - superset_home:/app/superset_home
     networks:
     - de_network
 
   # Streamlit
-  streamlit:
-    build:
-      context: ./docker/streamlit
-      dockerfile: Dockerfile
-    container_name: streamlit
-    volumes:
-      - ./app:/app
-    env_file:
-      - .env
-    ports:
-      - "8501:8501"
-    networks:
-      - de_network
+  # streamlit:
+  #   build:
+  #     context: ./docker/streamlit
+  #     dockerfile: Dockerfile
+  #   container_name: streamlit
+  #   volumes:
+  #     - ./app:/app
+  #   env_file:
+  #     - .env
+  #   ports:
+  #     - "8501:8501"
+  #   networks:
+  #     - de_network
 
   # UI mlflow
-  web:
-    restart: always
-    build: ./docker/mlflow
-    image: mlflow_server
-    container_name: mlflow_server
-    depends_on:
-      - mc
-      - mysql
-    ports:
-      - "7893:5000"
-    env_file:
-      - .env
-    command: mlflow server --backend-store-uri mysql+pymysql://${MYSQL_ROOT_USER}:${MYSQL_ROOT_PASSWORD}@mysql:3306/${MYSQL_DATABASESS} --default-artifact-root s3://mlflow/ --host 0.0.0.0
-    networks:
-      - de_network
+  # web:
+  #   restart: always
+  #   build: ./docker/mlflow
+  #   image: mlflow_server
+  #   container_name: mlflow_server
+  #   depends_on:
+  #     - mc
+  #     - mysql
+  #   ports:
+  #     - "7893:5000"
+  #   env_file:
+  #     - .env
+  #   command: mlflow server --backend-store-uri mysql+pymysql://${MYSQL_ROOT_USER}:${MYSQL_ROOT_PASSWORD}@mysql:3306/${MYSQL_DATABASESS} --default-artifact-root s3://mlflow/ --host 0.0.0.0
+  #   networks:
+  #     - de_network
 
   # Dagster
   dagster_dagit:
@@ -283,7 +260,6 @@ volumes:
   postgres_data: {}
   mysql: {}
   mariadb: {}
-  db_home: {}
   superset_home: {}
 
 networks:
