@@ -11,6 +11,7 @@ from pyspark.sql.types import *
 COMPUTE_KIND = "PySpark"
 LAYER = "silver"
 
+
 @asset(
     description="Cleaning companies table",
     ins={
@@ -52,6 +53,7 @@ def silver_cleaned_companies(context, bronze_companies: pl.DataFrame) -> Output[
                 "columns": spark_df.columns,
             },
         )
+
 
 @asset(
     description="Cleaning trades table",
@@ -100,7 +102,8 @@ def silver_cleaned_trades(context, bronze_trades: pl.DataFrame) -> Output[DataFr
                 "columns": spark_df.columns,
             },
         )
-    
+
+
 @asset(
     description="Create dim company",
     ins={
@@ -132,6 +135,7 @@ def silver_dim_company(context, silver_cleaned_companies: DataFrame) -> Output[D
         },
     )
 
+
 @asset(
     description="Create dim date",
     ins={
@@ -148,12 +152,13 @@ def silver_dim_company(context, silver_cleaned_companies: DataFrame) -> Output[D
 def silver_dim_date(context, silver_cleaned_trades: DataFrame) -> Output[DataFrame]:
     spark_df = silver_cleaned_trades
     context.log.debug("Start creating dim date ")
-    
+
     start_date = spark_df.select(min("tradingDate")).first()[0]
     end_date = spark_df.select(max("tradingDate")).first()[0]
 
     with init_spark_session() as spark:
-        date_range = spark.sparkContext.parallelize([(start_date + timedelta(days=x)) for x in range((end_date - start_date).days + 1)])
+        date_range = spark.sparkContext.parallelize(
+            [(start_date + timedelta(days=x)) for x in range((end_date - start_date).days + 1)])
         date_df = date_range.map(lambda x: (x,)).toDF(['date'])
 
         date_df = date_df.withColumn("dateKey", year(col("date"))*10000 + month(col("date"))*100 + dayofmonth(col("date"))) \
@@ -178,6 +183,7 @@ def silver_dim_date(context, silver_cleaned_trades: DataFrame) -> Output[DataFra
             },
         )
 
+
 @asset(
     description="Create fact table",
     ins={
@@ -199,14 +205,14 @@ def silver_dim_date(context, silver_cleaned_trades: DataFrame) -> Output[DataFra
 )
 def silver_fact_stock(context, silver_cleaned_trades: DataFrame, silver_dim_company: DataFrame, silver_dim_date: DataFrame) -> Output[DataFrame]:
     context.log.debug("Start creating fact table ...")
-    
+
     fact_table = (
         silver_cleaned_trades
         .join(silver_dim_company, silver_cleaned_trades['symbol'] == silver_dim_company['companyKey'], 'inner')
         .join(silver_dim_date, silver_cleaned_trades['tradingDate'] == silver_dim_date['full_date'], 'inner')
         .select('dateKey', 'companyKey', 'open_price', 'high_price', 'low_price', 'close_price', 'Volume')
     )
-    
+
     return Output(
         value=fact_table,
         metadata={

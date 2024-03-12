@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Union
 import os
 
+
 @contextmanager
 def connect_minio(config):
     client = Minio(
@@ -21,12 +22,14 @@ def connect_minio(config):
     except Exception as e:
         raise e
 
+
 def make_bucket(client: Minio, bucket_name):
     found = client.bucket_exists(bucket_name)
     if not found:
         client.make_bucket(bucket_name)
     else:
         print(f"Bucket {bucket_name} already exists")
+
 
 class MinioIOManager(IOManager):
     def __init__(self, config):
@@ -43,19 +46,21 @@ class MinioIOManager(IOManager):
         context.log.info(
             f"before join: {[layer, schema, table]}, key: {key}"
         )
+        # note: /tmp/file_x_y_z_202312251441.parquet
         tmp_file_path = "/tmp/file_{}_{}.parquet".format(
-            "_".join(context.asset_key.path), datetime.today().strftime("%Y%m%d%H%M%S")
+            "_".join(context.asset_key.path), datetime.today().strftime(
+                "%Y%m%d%H%M%S")
         )
 
         if context.has_partition_key:
             # partition_str = table_2020
             partition_str = str(table) + "_" + context.asset_partition_key
-            # bronze/schema/table/table_2020.parquet    
+            # bronze/schema/table/table_2020.parquet
             # /tmp/file_bronze_schema_table_xxxxxxxxxx.parquet
             return os.path.join(key, f"{partition_str}.parquet"), tmp_file_path
         else:
             # bronze/schema/table.parquet
-            return f"{key}.parquet", tmp_file_path 
+            return f"{key}.parquet", tmp_file_path
 
     def handle_output(self, context: OutputContext, obj: pl.DataFrame):
         """
@@ -74,7 +79,7 @@ class MinioIOManager(IOManager):
                 # Make bucket if not exists
                 make_bucket(client, bucket_name)
 
-                # Upload to MinIO 
+                # Upload to MinIO
                 # Ex: bucket: lakehouse
                 # key_name: bronze/stock/stock.parquet
                 # tmp_path: /tmp/file_bronze_stock.....
@@ -82,7 +87,8 @@ class MinioIOManager(IOManager):
                 context.log.info(
                     f"(MinIO handle_output) Number of rows and columns: {obj.shape}"
                 )
-                context.add_output_metadata({"path": key_name, "tmp": tmp_file_path})
+                context.add_output_metadata(
+                    {"path": key_name, "tmp": tmp_file_path})
 
                 # Clean tmp file
                 os.remove(tmp_file_path)
@@ -106,7 +112,8 @@ class MinioIOManager(IOManager):
                 # Ex: bucket_name: lakehouse
                 # key_name: bronze/stock/stocks.parquet
                 # tmp_file_path: /tmp/file_bronze_stock_bronze_stocks_xxxxxxxxx.parquet
-                context.log.info(f"(MinIO load_input) from key_name: {key_name}")
+                context.log.info(
+                    f"(MinIO load_input) from key_name: {key_name}")
                 client.fget_object(bucket_name, key_name, tmp_file_path)
                 df_data = pl.read_parquet(tmp_file_path)
                 context.log.info(

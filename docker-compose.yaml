@@ -85,7 +85,7 @@ services:
     # entrypoint: >
     #   /bin/sh -c " until (/usr/bin/mc config host add minio http://minio:9000 minio_username minio_password) do echo '...waiting...' && sleep 10; done; /usr/bin/mc mb minio/mlflow; /usr/bin/mc policy set public minio/mlflow; tail -f /dev/null;"
     entrypoint: >
-        /bin/sh -c " until (/usr/bin/mc config host add minio http://minio:9000 minio_username minio_password) do echo '...waiting...' && sleep 10; done; tail -f /dev/null;"
+        /bin/sh -c " until (/usr/bin/mc config host add minio http://minio:9000 minio_username minio_password) do echo '...waiting...' && sleep 10; done; /usr/bin/mc mb minio/lakehouse; tail -f /dev/null;"
     depends_on:
       - minio
     networks:
