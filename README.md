@@ -30,5 +30,8 @@ Ap dụng Linear Regression để dự đoán giá cả sản phẩm.
 
 ## Điều phối công việc (Orchestration)
 Sử dụng Dagster để quản lý và điều phối các tác vụ xử lý dữ liệu.
+
+![Data_Lineage](https://github.com/lephuocyen20/Build-a-Data-Platform-with-Open-Source/assets/134000205/5895d876-7646-4d05-8aed-b199080c2207)
+
 ## Môi trường triển khai
 Triển khai toàn bộ hệ thống trên nền tảng Docker để dễ dàng mở rộng.
