@@ -23,6 +23,8 @@ Sử dụng Apache Iceberg để định dạng lại dữ liệu thành dạng 
 
 Sử dụng HMS để lưu trữ metadata của các bảng dữ liệu.
 
+![Player_Data](https://github.com/lephuocyen20/Build-a-Data-Platform-with-Open-Source/assets/134000205/576aead4-26f8-4e6d-b47e-3807e95ed4b0)
+
 ## Trực quan hóa và phân tích dữ liệu (Visualization and analysis)
 Sử dụng Apache Superset để thực hiện trực quan hóa dữ liệu và xây dựng báo cáo.
 
