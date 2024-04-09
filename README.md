@@ -4,6 +4,8 @@ Tiểu luận chuyên ngành
 ## Mô tả tổng quan
 Đây là mô tả về kiến trúc và các công nghệ được sử dụng trong hệ thống xử lý Big Data.
 
+![workflow](https://github.com/lephuocyen20/Build-a-Data-Platform-with-Open-Source/assets/134000205/6b3a8051-cb7b-4f95-9f25-25abeeb7d68a)
+
 ## Dữ liệu đầu vào (Data source)
 Dữ liệu thô được lưu trữ trong CSDL MySQL.
 
